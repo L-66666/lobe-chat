@@ -14,7 +14,7 @@ interface RelationTableConfig {
   relations: {
     field: string;
     sourceField?: string;
-    sourceTable: string;
+    sourceTable: keyof typeof EXPORT_TABLES;
   }[];
   table: keyof typeof EXPORT_TABLES;
   type: 'relation';
@@ -26,31 +26,47 @@ export const DATA_EXPORT_CONFIG = {
     { table: 'userSettings', userField: 'id' },
     { table: 'userInstalledPlugins' },
     { table: 'agents' },
-    { table: 'sessionGroups' },
-    { table: 'sessions' },
-    { table: 'topics' },
-    { table: 'threads' },
-    { table: 'messages' },
-    { table: 'files' },
-    { table: 'knowledgeBases' },
+    { table: 'agentsFiles' },
     { table: 'agentsKnowledgeBases' },
-    { table: 'aiProviders' },
+    { table: 'agentsToSessions' },
     { table: 'aiModels' },
-    { table: 'asyncTasks' },
+    { table: 'aiProviders' },
+    // async tasks should not be included
+    // { table: 'asyncTasks' },
     { table: 'chunks' },
     { table: 'embeddings' },
-    { table: 'agentsToSessions' },
-    { table: 'agentsFiles' },
+    { table: 'files' },
+    { table: 'fileChunks' },
     { table: 'filesToSessions' },
-    { table: 'messageChunks' },
+    { table: 'knowledgeBases' },
     { table: 'knowledgeBaseFiles' },
-    { table: 'messageQueryChunks' },
+    { table: 'messageChunks' },
     { table: 'messagePlugins' },
-    { table: 'messageTTS' },
-    { table: 'messageTranslates' },
-    { table: 'messagesFiles' },
+    { table: 'messageQueryChunks' },
     { table: 'messageQueries' },
+    { table: 'messageTranslates' },
+    { table: 'messageTTS' },
+    { table: 'messages' },
+    { table: 'messagesFiles' },
+
+    // next auth tables won't be included
+    // { table: 'nextauthAccounts' },
+    // { table: 'nextauthSessions' },
+    // { table: 'nextauthAuthenticators' },
+    // { table: 'nextauthVerificationTokens' },
+
+    { table: 'sessionGroups' },
+    { table: 'sessions' },
+    { table: 'threads' },
+    { table: 'topics' },
+    { table: 'unstructuredChunks' },
   ] as BaseTableConfig[],
+  relationTables: [
+    {
+      relations: [{ field: 'hashId', sourceField: 'fileHash', sourceTable: 'files' }],
+      table: 'globalFiles',
+    },
+  ] as RelationTableConfig[],
 };
 
 export class DataExporterRepos {
@@ -155,6 +171,34 @@ export class DataExporterRepos {
     });
 
     console.log('baseResults:', baseResults);
+
+    // 2. 然后并发查询所有关联表
+
+    const relationResults = await pMap(
+      DATA_EXPORT_CONFIG.relationTables,
+      async (config) => {
+        // 检查所有依赖的源表是否有数据
+        const allSourcesHaveData = config.relations.every(
+          (relation) => (result[relation.sourceTable] || []).length > 0,
+        );
+
+        if (!allSourcesHaveData) {
+          console.log(`Skipping table ${config.table} as some source tables have no data`);
+          return { data: [], table: config.table };
+        }
+
+        return {
+          data: await this.queryTable(config, result),
+          table: config.table,
+        };
+      },
+      { concurrency },
+    );
+
+    // 更新结果集
+    relationResults.forEach(({ table, data }) => {
+      result[table] = data;
+    });
 
     return result;
   }
