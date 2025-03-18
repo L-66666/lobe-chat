@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { PgliteDatabase, drizzle } from 'drizzle-orm/pglite';
 import { Md5 } from 'ts-md5';
 
@@ -164,8 +165,28 @@ export class DatabaseManager {
       hash = Md5.hashStr(JSON.stringify(migrations));
       // if hash is the same, no need to migrate
       if (hash === cacheHash) {
-        this.isLocalDBSchemaSynced = true;
-        return this.db;
+        try {
+          // 检查数据库中是否存在表
+          // 这里使用 pg_tables 系统表查询用户表数量
+          const tablesResult = await this.db.execute(
+            sql`
+              SELECT COUNT(*) as table_count
+              FROM information_schema.tables
+              WHERE table_schema = 'public'
+            `,
+          );
+
+          const tableCount = parseInt((tablesResult.rows[0] as any).table_count || '0', 10);
+
+          // 如果表数量大于0，则认为数据库已正确初始化
+          if (tableCount > 0) {
+            this.isLocalDBSchemaSynced = true;
+            return this.db;
+          }
+        } catch (error) {
+          console.warn('Error checking table existence, proceeding with migration', error);
+          // 如果查询失败，继续执行迁移以确保安全
+        }
       }
     }
 
@@ -344,4 +365,12 @@ export const initializeDB = (callbacks?: DatabaseLoadingCallbacks) =>
 
 export const resetClientDatabase = async () => {
   await dbManager.resetDatabase();
+};
+
+export const updateMigrationRecord = async (migrationHash: string) => {
+  await clientDB.execute(
+    sql`INSERT INTO "drizzle"."__drizzle_migrations" ("hash", "created_at") VALUES (${migrationHash}, ${Date.now()});`,
+  );
+
+  await initializeDB();
 };

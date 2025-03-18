@@ -4,26 +4,17 @@ import { Alert, CodeEditor, Icon } from '@lobehub/ui';
 import { Button, Card, List, Typography } from 'antd';
 import { createStyles } from 'antd-style';
 import dayjs from 'dayjs';
-import { sql } from 'drizzle-orm';
 import isEqual from 'fast-deep-equal';
 import { AlertCircle, CheckCircle, Play } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Flexbox } from 'react-layout-kit';
 
-import { clientDB } from '@/database/client/db';
+import { clientDB, updateMigrationRecord } from '@/database/client/db';
 import { useGlobalStore } from '@/store/global';
-import { clientDBSelectors } from '@/store/global/selectors/clientDB';
+import { clientDBSelectors } from '@/store/global/selectors';
 
 const { Text } = Typography;
-
-const handleMarkMigrationComplete = async (migrationHash: string) => {
-  console.log('Marking migration as complete:', migrationHash);
-  const res = await clientDB.execute(
-    sql`INSERT INTO "drizzle"."__drizzle_migrations" ("hash", "created_at") VALUES (${migrationHash}, ${Date.now()});`,
-  );
-  console.log(res);
-};
 
 // 使用 antd-style 创建样式
 const useStyles = createStyles(({ css, token }) => ({
@@ -190,7 +181,7 @@ const Repair = memo(() => {
                           queryResult.success && (
                             <Button
                               key="complete"
-                              onClick={() => handleMarkMigrationComplete(migration.hash)}
+                              onClick={() => updateMigrationRecord(migration.hash)}
                               size={'small'}
                               type="primary"
                             >
