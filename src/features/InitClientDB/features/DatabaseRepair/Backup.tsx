@@ -1,9 +1,11 @@
 import { Alert } from '@lobehub/ui';
-import { Button, Card, Typography } from 'antd';
+import { App, Button, Card, Typography } from 'antd';
 import { createStyles } from 'antd-style';
 import { AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Flexbox } from 'react-layout-kit';
+
+import { resetClientDatabase } from '@/database/client/db';
 
 const { Text, Paragraph } = Typography;
 
@@ -17,6 +19,7 @@ const Backup = () => {
   const { t } = useTranslation('common');
   const { styles } = useStyles();
 
+  const { modal } = App.useApp();
   return (
     <Flexbox gap={24}>
       <Card
@@ -45,7 +48,24 @@ const Backup = () => {
             variant={'pure'}
           />
 
-          <Button block danger>
+          <Button
+            block
+            danger
+            onClick={() => {
+              modal.confirm({
+                content: t('clientDB.solve.backup.reset.confirm.desc'),
+                okButtonProps: {
+                  danger: true,
+                },
+                onOk: async () => {
+                  await resetClientDatabase();
+
+                  location.reload();
+                },
+                title: t('clientDB.solve.backup.reset.confirm.title'),
+              });
+            }}
+          >
             {t('clientDB.solve.backup.reset.button')}
           </Button>
         </Flexbox>

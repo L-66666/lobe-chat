@@ -14,6 +14,7 @@ import migrations from './migrations.json';
 
 const pgliteSchemaHashCache = 'LOBE_CHAT_PGLITE_SCHEMA_HASH';
 
+const DB_NAME = 'lobechat';
 type DrizzleInstance = PgliteDatabase<typeof schema>;
 
 interface onErrorState {
@@ -215,13 +216,11 @@ export class DatabaseManager {
 
         let db: typeof PGlite;
 
-        const dbName = 'lobechat';
-
         // make db as web worker if worker is available
         // https://github.com/lobehub/lobe-chat/issues/5785
         if (typeof Worker !== 'undefined' && typeof navigator.locks !== 'undefined') {
           db = await initPgliteWorker({
-            dbName,
+            dbName: DB_NAME,
             fsBundle: fsBundle as Blob,
             vectorBundlePath: DatabaseManager.VECTOR_CDN_URL,
             wasmModule,
@@ -230,7 +229,7 @@ export class DatabaseManager {
           // in edge runtime or test runtime, we don't have worker
           db = new PGlite({
             extensions: { vector },
-            fs: typeof window === 'undefined' ? new MemoryFS(dbName) : new IdbFs(dbName),
+            fs: typeof window === 'undefined' ? new MemoryFS(DB_NAME) : new IdbFs(DB_NAME),
             relaxedDurability: true,
             wasmModule,
           });
@@ -299,6 +298,38 @@ export class DatabaseManager {
       },
     });
   }
+
+  async resetDatabase(): Promise<void> {
+    // 删除 IndexedDB 数据库
+    return new Promise<void>((resolve, reject) => {
+      // 检查 IndexedDB 是否可用
+      if (typeof indexedDB === 'undefined') {
+        console.warn('IndexedDB is not available, cannot delete database');
+        resolve();
+        return;
+      }
+
+      const dbName = `/pglite/${DB_NAME}`;
+      const request = indexedDB.deleteDatabase(dbName);
+
+      request.onsuccess = () => {
+        console.log(`✅ Database '${dbName}' reset successfully`);
+
+        // 清除本地存储的模式哈希
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem(pgliteSchemaHashCache);
+        }
+
+        resolve();
+      };
+
+      // eslint-disable-next-line unicorn/prefer-add-event-listener
+      request.onerror = (event) => {
+        console.error('❌ Error resetting database:', event);
+        reject(new Error(`Failed to reset database '${dbName}'`));
+      };
+    });
+  }
 }
 
 // 导出单例
@@ -310,3 +341,7 @@ export const clientDB = dbManager.createProxy();
 // 导出初始化方法，供应用启动时使用
 export const initializeDB = (callbacks?: DatabaseLoadingCallbacks) =>
   dbManager.initialize(callbacks);
+
+export const resetClientDatabase = async () => {
+  await dbManager.resetDatabase();
+};
