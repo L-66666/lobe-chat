@@ -31,8 +31,14 @@ export const clientDBSlice: StateCreator<
 
     const { initializeDB } = await import('@/database/client/db');
     await initializeDB({
-      onError: (error) => {
-        set({ initClientDBError: error });
+      onError: ({ error, migrationsSQL, migrationTableItems }) => {
+        set({
+          initClientDBError: error,
+          initClientDBMigrations: {
+            sqls: migrationsSQL,
+            tableRecords: migrationTableItems,
+          },
+        });
       },
       onProgress: (data) => {
         set({ initClientDBProcess: data });

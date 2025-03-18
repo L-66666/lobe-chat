@@ -1,7 +1,12 @@
 import { PgliteDatabase, drizzle } from 'drizzle-orm/pglite';
 import { Md5 } from 'ts-md5';
 
-import { ClientDBLoadingProgress, DatabaseLoadingState } from '@/types/clientDB';
+import {
+  ClientDBLoadingProgress,
+  DatabaseLoadingState,
+  MigrationSQL,
+  MigrationTableItem,
+} from '@/types/clientDB';
 import { sleep } from '@/utils/sleep';
 
 import * as schema from '../schemas';
@@ -11,8 +16,14 @@ const pgliteSchemaHashCache = 'LOBE_CHAT_PGLITE_SCHEMA_HASH';
 
 type DrizzleInstance = PgliteDatabase<typeof schema>;
 
+interface onErrorState {
+  error: Error;
+  migrationTableItems: MigrationTableItem[];
+  migrationsSQL: MigrationSQL[];
+}
+
 export interface DatabaseLoadingCallbacks {
-  onError?: (error: Error) => void;
+  onError?: (error: onErrorState) => void;
   onProgress?: (progress: ClientDBLoadingProgress) => void;
   onStateChange?: (state: DatabaseLoadingState) => void;
 }
@@ -241,10 +252,27 @@ export class DatabaseManager {
         this.initPromise = null;
         this.callbacks?.onStateChange?.(DatabaseLoadingState.Error);
         const error = e as Error;
+
+        // 查询迁移表数据
+        let migrationsTableData: MigrationTableItem[] = [];
+        try {
+          // 尝试查询迁移表
+          const res = await this.db.execute(
+            'SELECT * FROM "drizzle"."__drizzle_migrations" ORDER BY "created_at" DESC;',
+          );
+          migrationsTableData = res.rows as unknown as MigrationTableItem[];
+        } catch (queryError) {
+          console.error('Failed to query migrations table:', queryError);
+        }
+
         this.callbacks?.onError?.({
-          message: error.message,
-          name: error.name,
-          stack: error.stack,
+          error: {
+            message: error.message,
+            name: error.name,
+            stack: error.stack,
+          },
+          migrationTableItems: migrationsTableData,
+          migrationsSQL: migrations,
         });
 
         console.error(error);
