@@ -41,11 +41,11 @@ const DataTable = ({ tableName }: DataTableProps) => {
           },
           {
             icon: Download,
+            onClick: async () => {
+              const data = await exportService.exportData();
+              console.log(data);
+            },
             title: 'Export',
-            onClick:async () => {
-          const data = await exportService.exportData();
-          console.log(data);
-        }
           },
           {
             icon: RefreshCw,
