@@ -20,10 +20,7 @@ interface RelationTableConfig {
   type: 'relation';
 }
 
-// 配置拆分为基础表和关联表
-
 export const DATA_EXPORT_CONFIG = {
-  // 1. 基础表
   baseTables: [
     { table: 'users', userField: 'id' },
     { table: 'userSettings', userField: 'id' },
@@ -42,76 +39,18 @@ export const DATA_EXPORT_CONFIG = {
     { table: 'asyncTasks' },
     { table: 'chunks' },
     { table: 'embeddings' },
+    { table: 'agentsToSessions' },
+    { table: 'agentsFiles' },
+    { table: 'filesToSessions' },
+    { table: 'messageChunks' },
+    { table: 'knowledgeBaseFiles' },
+    { table: 'messageQueryChunks' },
+    { table: 'messagePlugins' },
+    { table: 'messageTTS' },
+    { table: 'messageTranslates' },
+    { table: 'messagesFiles' },
+    { table: 'messageQueries' },
   ] as BaseTableConfig[],
-  // 2. 关联表
-  relationTables: [
-    {
-      relations: [
-        { field: 'agentId', sourceField: 'id', sourceTable: 'agents' },
-        { sourceField: 'sessionId', sourceTable: 'sessions' },
-      ],
-      table: 'agentsToSessions',
-    },
-    {
-      relations: [
-        { sourceField: 'agentId', sourceTable: 'agents' },
-        { sourceField: 'fileId', sourceTable: 'files' },
-      ],
-      table: 'agentsFiles',
-    },
-    {
-      relations: [{ field: 'sessionId', sourceTable: 'sessions' }],
-      table: 'filesToSessions',
-    },
-    // {
-    //   relations: [{ field: 'id', sourceTable: 'chunks' }],
-    //   table: 'fileChunks',
-    // },
-    {
-      relations: [{ field: 'id', sourceTable: 'messages' }],
-      table: 'messagePlugins',
-    },
-    {
-      relations: [{ field: 'id', sourceTable: 'messages' }],
-      table: 'messageTTS',
-    },
-    {
-      relations: [{ field: 'id', sourceTable: 'messages' }],
-      table: 'messageTranslates',
-    },
-    {
-      relations: [
-        { field: 'messageId', sourceTable: 'messages' },
-        { field: 'fileId', sourceTable: 'files' },
-      ],
-      table: 'messagesFiles',
-    },
-    {
-      relations: [{ field: 'messageId', sourceTable: 'messages' }],
-      table: 'messageQueries',
-    },
-    {
-      relations: [
-        { field: 'messageId', sourceTable: 'messages' },
-        { field: 'chunkId', sourceTable: 'chunks' },
-      ],
-      table: 'messageQueryChunks',
-    },
-    {
-      relations: [
-        { field: 'messageId', sourceTable: 'messages' },
-        { field: 'chunkId', sourceTable: 'chunks' },
-      ],
-      table: 'messageChunks',
-    },
-    {
-      relations: [
-        { field: 'knowledgeBaseId', sourceTable: 'knowledgeBases' },
-        { field: 'fileId', sourceTable: 'files' },
-      ],
-      table: 'knowledgeBaseFiles',
-    },
-  ] as RelationTableConfig[],
 };
 
 export class DataExporterRepos {
@@ -216,34 +155,6 @@ export class DataExporterRepos {
     });
 
     console.log('baseResults:', baseResults);
-    // 2. 然后并发查询所有关联表
-
-    console.log('Querying relation tables...');
-    const relationResults = await pMap(
-      DATA_EXPORT_CONFIG.relationTables,
-      async (config) => {
-        // 检查所有依赖的源表是否有数据
-        const allSourcesHaveData = config.relations.every(
-          (relation) => (result[relation.sourceTable] || []).length > 0,
-        );
-
-        if (!allSourcesHaveData) {
-          console.log(`Skipping table ${config.table} as some source tables have no data`);
-          return { data: [], table: config.table };
-        }
-
-        return {
-          data: await this.queryTable(config, result),
-          table: config.table,
-        };
-      },
-      { concurrency },
-    );
-
-    // 更新结果集
-    relationResults.forEach(({ table, data }) => {
-      result[table] = data;
-    });
 
     return result;
   }
