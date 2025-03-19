@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import { PgliteDatabase, drizzle } from 'drizzle-orm/pglite';
 import { Md5 } from 'ts-md5';
 
+import { DrizzleMigrationModel } from '@/database/models/drizzleMigration';
 import {
   ClientDBLoadingProgress,
   DatabaseLoadingState,
@@ -277,10 +278,8 @@ export class DatabaseManager {
         let migrationsTableData: MigrationTableItem[] = [];
         try {
           // 尝试查询迁移表
-          const res = await this.db.execute(
-            'SELECT * FROM "drizzle"."__drizzle_migrations" ORDER BY "created_at" DESC;',
-          );
-          migrationsTableData = res.rows as unknown as MigrationTableItem[];
+          const drizzleMigration = new DrizzleMigrationModel(this.db as any);
+          migrationsTableData = await drizzleMigration.getMigrationList();
         } catch (queryError) {
           console.error('Failed to query migrations table:', queryError);
         }

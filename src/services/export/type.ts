@@ -1,9 +1,5 @@
+import { ExportDatabaseData } from '@/types/export';
 
-export interface ExportDatabaseData {
-  data: any;
-  url: undefined;
-}
-
-export interface IImportService {
+export interface IExportService {
   exportData(): Promise<ExportDatabaseData>;
 }
