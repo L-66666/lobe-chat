@@ -15,7 +15,6 @@ import {
   ConfigModelMap,
   ExportType,
 } from '@/types/exportConfig';
-import { exportJSONFile } from '@/utils/client/exportFile';
 
 type CreateConfigFileState<T extends ExportType> = ConfigModelMap[T]['state'];
 
