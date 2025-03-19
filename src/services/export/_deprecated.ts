@@ -1,4 +1,3 @@
-import { importService } from '@/services/import';
 import { messageService } from '@/services/message';
 import { sessionService } from '@/services/session';
 import { topicService } from '@/services/topic';
@@ -6,52 +5,12 @@ import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';
 import { useUserStore } from '@/store/user';
 import { settingsSelectors } from '@/store/user/selectors';
-import { ConfigFile } from '@/types/exportConfig';
-import { ImportStage, OnImportCallbacks } from '@/types/importer';
 import { createConfigFile, exportConfigFile } from '@/utils/config';
-
-export interface ImportResult {
-  added: number;
-  errors: number;
-  skips: number;
-}
-export interface ImportResults {
-  messages?: ImportResult;
-  sessionGroups?: ImportResult;
-  sessions?: ImportResult;
-  topics?: ImportResult;
-  type?: string;
-}
 
 /**
  * @deprecated
  */
 class ConfigService {
-  importConfigState = async (config: ConfigFile, callbacks?: OnImportCallbacks): Promise<void> => {
-    if (config.exportType === 'settings') {
-      await importService.importSettings(config.state.settings);
-      callbacks?.onStageChange?.(ImportStage.Success);
-      return;
-    }
-
-    if (config.exportType === 'all') {
-      await importService.importSettings(config.state.settings);
-    }
-
-    await importService.importData(
-      {
-        messages: (config.state as any).messages || [],
-        sessionGroups: (config.state as any).sessionGroups || [],
-        sessions: (config.state as any).sessions || [],
-        topics: (config.state as any).topics || [],
-        version: config.version,
-      },
-      callbacks,
-    );
-  };
-
-  // TODO: Separate export feature into a new service like importService
-
   /**
    * export all agents
    */

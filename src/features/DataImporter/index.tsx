@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Center } from 'react-layout-kit';
 
 import DataStyleModal from '@/components/DataStyleModal';
-import { ImportResult, ImportResults, configService } from '@/services/config';
+import { ImportResult, ImportResults , ClientService } from '@/services/import/_deprecated';
 import { useChatStore } from '@/store/chat';
 import { useSessionStore } from '@/store/session';
 import { ErrorShape, FileUploadState, ImportStage } from '@/types/importer';
@@ -147,6 +147,8 @@ const DataImporter = memo<DataImporterProps>(({ children, onFinishImport }) => {
         beforeUpload={async (file) => {
           await importConfigFile(file, async (config) => {
             setImportState(ImportStage.Preparing);
+
+            const configService = new ClientService();
 
             await configService.importConfigState(config, {
               onError: (error) => {
