@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FORM_STYLE } from '@/const/layoutTokens';
 import DataImporter from '@/features/DataImporter';
-import { configService } from '@/services/export/_deprecated';
+import { configService } from '@/services/config';
 import { useChatStore } from '@/store/chat';
 import { useFileStore } from '@/store/file';
 import { useSessionStore } from '@/store/session';
@@ -69,7 +69,12 @@ const AdvancedActions = () => {
       {
         children: (
           <Space.Compact>
-            <Button icon={<Icon icon={HardDriveUpload} />} onClick={configService.exportAll}>
+            <Button
+              icon={<Icon icon={HardDriveUpload} />}
+              onClick={() => {
+                configService.exportAll();
+              }}
+            >
               {t('storage.actions.export.button')}
             </Button>
             <Dropdown

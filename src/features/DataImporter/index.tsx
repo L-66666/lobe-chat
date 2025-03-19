@@ -12,7 +12,7 @@ import { ImportResult, ImportResults , ClientService } from '@/services/import/_
 import { useChatStore } from '@/store/chat';
 import { useSessionStore } from '@/store/session';
 import { ErrorShape, FileUploadState, ImportStage } from '@/types/importer';
-import { importConfigFile } from '@/utils/config';
+import { importConfigFile } from '@/utils/client/config';
 
 import ImportError from './Error';
 import { FileUploading } from './FileUploading';

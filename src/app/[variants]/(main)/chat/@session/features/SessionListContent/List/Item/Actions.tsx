@@ -18,7 +18,7 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isServerMode } from '@/const/version';
-import { configService } from '@/services/export/_deprecated';
+import { configService } from '@/services/config';
 import { useSessionStore } from '@/store/session';
 import { sessionHelpers } from '@/store/session/helpers';
 import { sessionGroupSelectors, sessionSelectors } from '@/store/session/selectors';

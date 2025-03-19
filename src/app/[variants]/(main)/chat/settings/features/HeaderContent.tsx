@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { HEADER_ICON_SIZE } from '@/const/layoutTokens';
 import { isServerMode } from '@/const/version';
-import { configService } from '@/services/export/_deprecated';
+import { configService } from '@/services/config';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { useSessionStore } from '@/store/session';
 

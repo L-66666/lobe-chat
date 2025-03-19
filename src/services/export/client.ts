@@ -8,6 +8,8 @@ export class ClientService extends BaseClientService {
   }
 
   exportData = async () => {
-    return this.dataExporterRepos.export();
+    const data = await this.dataExporterRepos.export();
+
+    return { data, url: undefined };
   };
 }

@@ -1,3 +1,4 @@
+import { Migration } from '@/migrations';
 import { messageService } from '@/services/message';
 import { sessionService } from '@/services/session';
 import { topicService } from '@/services/topic';
@@ -5,12 +6,74 @@ import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';
 import { useUserStore } from '@/store/user';
 import { settingsSelectors } from '@/store/user/selectors';
-import { createConfigFile, exportConfigFile } from '@/utils/config';
+import {
+  ConfigFileAgents,
+  ConfigFileAll,
+  ConfigFileSessions,
+  ConfigFileSettings,
+  ConfigFileSingleSession,
+  ConfigModelMap,
+  ExportType,
+} from '@/types/exportConfig';
+import { exportJSONFile } from '@/utils/client/exportFile';
+
+type CreateConfigFileState<T extends ExportType> = ConfigModelMap[T]['state'];
+
+type CreateConfigFile<T extends ExportType> = ConfigModelMap[T]['file'];
+
+const createConfigFile = <T extends ExportType>(
+  type: T,
+  state: CreateConfigFileState<T>,
+): CreateConfigFile<T> => {
+  switch (type) {
+    case 'agents': {
+      return {
+        exportType: 'agents',
+        state,
+        version: Migration.targetVersion,
+      } as ConfigFileAgents;
+    }
+
+    case 'sessions': {
+      return {
+        exportType: 'sessions',
+        state,
+        version: Migration.targetVersion,
+      } as ConfigFileSessions;
+    }
+
+    case 'settings': {
+      return {
+        exportType: 'settings',
+        state,
+        version: Migration.targetVersion,
+      } as ConfigFileSettings;
+    }
+
+    case 'singleSession': {
+      return {
+        exportType: 'sessions',
+        state,
+        version: Migration.targetVersion,
+      } as ConfigFileSingleSession;
+    }
+
+    case 'all': {
+      return {
+        exportType: 'all',
+        state,
+        version: Migration.targetVersion,
+      } as ConfigFileAll;
+    }
+  }
+
+  throw new Error('缺少正确的导出类型，请检查实现...');
+};
 
 /**
  * @deprecated
  */
-class ConfigService {
+export class ConfigService {
   /**
    * export all agents
    */
@@ -18,9 +81,7 @@ class ConfigService {
     const agents = await sessionService.getSessionsByType('agent');
     const sessionGroups = await sessionService.getSessionGroups();
 
-    const config = createConfigFile('agents', { sessionGroups, sessions: agents });
-
-    exportConfigFile(config, 'agents');
+    return createConfigFile('agents', { sessionGroups, sessions: agents });
   };
 
   /**
@@ -32,9 +93,7 @@ class ConfigService {
     const messages = await messageService.getAllMessages();
     const topics = await topicService.getAllTopics();
 
-    const config = createConfigFile('sessions', { messages, sessionGroups, sessions, topics });
-
-    exportConfigFile(config, 'sessions');
+    return createConfigFile('sessions', { messages, sessionGroups, sessions, topics });
   };
 
   /**
@@ -48,30 +107,7 @@ class ConfigService {
     const topics = await topicService.getTopics({ sessionId: id });
 
     const config = createConfigFile('singleSession', { messages, sessions: [session], topics });
-
-    exportConfigFile(config, `${session.meta?.title}-session`);
-  };
-
-  /**
-   * export a topic
-   */
-  exportSingleTopic = async (sessionId: string, topicId: string) => {
-    const session = this.getSession(sessionId);
-    if (!session) return;
-
-    const messages = await messageService.getMessages(sessionId, topicId);
-    const topics = await topicService.getTopics({ sessionId });
-
-    const topic = topics.find((item) => item.id === topicId);
-    if (!topic) return;
-
-    const config = createConfigFile('singleSession', {
-      messages,
-      sessions: [session],
-      topics: [topic],
-    });
-
-    exportConfigFile(config, `${topic.title}-topic`);
+    return { config, title: `${session.meta?.title}-session` };
   };
 
   exportSingleAgent = async (id: string) => {
@@ -80,7 +116,7 @@ class ConfigService {
 
     const config = createConfigFile('agents', { sessionGroups: [], sessions: [agent] });
 
-    exportConfigFile(config, agent.meta?.title || 'agent');
+    return { config, title: `${agent.meta?.title}-session` };
   };
 
   /**
@@ -89,9 +125,7 @@ class ConfigService {
   exportSettings = async () => {
     const settings = this.getSettings();
 
-    const config = createConfigFile('settings', { settings });
-
-    exportConfigFile(config, 'settings');
+    return createConfigFile('settings', { settings });
   };
 
   /**
@@ -104,9 +138,7 @@ class ConfigService {
     const topics = await topicService.getAllTopics();
     const settings = this.getSettings();
 
-    const config = createConfigFile('all', { messages, sessionGroups, sessions, settings, topics });
-
-    exportConfigFile(config, 'config');
+    return createConfigFile('all', { messages, sessionGroups, sessions, settings, topics });
   };
 
   private getSettings = () => settingsSelectors.exportSettings(useUserStore.getState());
@@ -118,4 +150,7 @@ class ConfigService {
     sessionSelectors.getSessionById(id)(useSessionStore.getState());
 }
 
+/**
+ * @deprecated
+ */
 export const configService = new ConfigService();

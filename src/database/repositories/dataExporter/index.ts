@@ -170,8 +170,6 @@ export class DataExporterRepos {
       result[table] = data;
     });
 
-    console.log('baseResults:', baseResults);
-
     // 2. 然后并发查询所有关联表
 
     const relationResults = await pMap(
@@ -199,6 +197,8 @@ export class DataExporterRepos {
     relationResults.forEach(({ table, data }) => {
       result[table] = data;
     });
+
+    console.log('finalResults:', result);
 
     return result;
   }
